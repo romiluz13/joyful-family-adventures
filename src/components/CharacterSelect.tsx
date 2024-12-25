@@ -8,7 +8,7 @@ interface CharacterSelectProps {
 const characters = [
   {
     name: "Rachel",
-    description: "The loving grandmother with amazing cooking skills",
+    description: "The loving grandmother with amazing cooking skills and a great sense of humor",
     color: "bg-game-pink",
   },
   {
