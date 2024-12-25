@@ -1,22 +1,34 @@
-import { Toaster } from "@/components/ui/toaster";
-import { TooltipProvider } from "@radix-ui/react-tooltip";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
-import Index from "./pages/Index";
+import React from 'react';
+import { GameProvider, useGame } from './contexts/GameContext';
+import { IntroScreen } from './components/IntroScreen';
+import GameScreen from './components/GameScreen';
+import { Toaster } from 'sonner';
 
-const queryClient = new QueryClient();
+function GameContainer() {
+  const { gamePhase, setGamePhase } = useGame();
 
-const App = () => (
-  <QueryClientProvider client={queryClient}>
-    <TooltipProvider>
-      <Toaster />
-      <BrowserRouter>
-        <Routes>
-          <Route path="/" element={<Index />} />
-        </Routes>
-      </BrowserRouter>
-    </TooltipProvider>
-  </QueryClientProvider>
-);
+  const handleStartGame = () => {
+    setGamePhase('investigation');
+  };
+
+  return (
+    <>
+      {gamePhase === 'intro' ? (
+        <IntroScreen onStartGame={handleStartGame} />
+      ) : (
+        <GameScreen />
+      )}
+    </>
+  );
+}
+
+function App() {
+  return (
+    <GameProvider>
+      <GameContainer />
+      <Toaster position="top-center" />
+    </GameProvider>
+  );
+}
 
 export default App;
