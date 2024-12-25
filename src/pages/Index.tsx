@@ -2,6 +2,7 @@ import { GameProvider } from "@/contexts/GameContext";
 import { useGame } from "@/contexts/GameContext";
 import WelcomeScreen from "@/components/WelcomeScreen";
 import CharacterSelect from "@/components/CharacterSelect";
+import GameScreen from "@/components/GameScreen";
 import { useToast } from "@/components/ui/use-toast";
 
 const GameContent = () => {
@@ -18,8 +19,7 @@ const GameContent = () => {
       title: "Character Selected!",
       description: `You chose to interact with ${character}!`,
     });
-    // For now, we'll just show a toast. Later we can transition to the game screen
-    // setGameState("play");
+    setGameState("play");
   };
 
   if (gameState === "welcome") {
@@ -28,6 +28,10 @@ const GameContent = () => {
 
   if (gameState === "select") {
     return <CharacterSelect onSelectCharacter={handleSelectCharacter} />;
+  }
+
+  if (gameState === "play") {
+    return <GameScreen />;
   }
 
   return null;
