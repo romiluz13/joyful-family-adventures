@@ -1,35 +1,13 @@
-export enum PersonalityTrait {
-  LOUD = 'loud',
-  HUMOROUS = 'humorous',
-  PROTECTIVE = 'protective',
-  COMPETITIVE = 'competitive',
-  DEFENSIVE = 'defensive',
-  RESERVED = 'reserved',
-  OBSERVANT = 'observant',
-  WITTY = 'witty',
-  WARM = 'warm',
-  GENTLE = 'gentle',
-  HONEST = 'honest'
-}
-
-export interface CharacterPersonality {
-  primaryTraits: PersonalityTrait[];
-  stressResponse: string;
-  quirks: string[];
-  defaultTone: string;
-}
-
-export interface Character {
+interface Character {
   id: string;
   name: string;
-  personality: CharacterPersonality;
-  backstory: string;
-  relationships: Map<string, Relationship>;
-  knownSecrets: string[];
-  observations: Map<string, string>;  // Time -> Observation
-  stressLevel: number;  // 0-100
-  trustLevel: number;   // 0-100
-  isLying: boolean;     // Current conversation state
+  role: string;
+  testimony: string[];
+  secrets: string[];
+  isLying: boolean[];  // Corresponds to each testimony
+  relationships: Map<string, Relationship>;  // Character ID to relationship
+  location: Location;
+  alibi: string;
 }
 
 interface Relationship {
@@ -38,7 +16,7 @@ interface Relationship {
   trustLevel: number;  // 0-100
 }
 
-export enum Location {
+enum Location {
   DINING_ROOM = 'dining_room',
   LIBRARY = 'library',
   GARDEN = 'garden',

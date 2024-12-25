@@ -1,0 +1,45 @@
+Introduction:
+
+A short description of the murder mystery is displayed.
+The user is informed that Omri has been murdered and they need to interrogate the suspects to uncover the truth.
+Action:
+
+A “Start Investigation” button takes the player to the main gameplay screen.
+Gameplay Screen
+List of Characters:
+
+The player is presented with a list of suspects (Rachel, Rom, Ilan, Michal, and Neta).
+Each character is displayed as a button or interactive element.
+Interrogation:
+
+Clicking on a character opens a dialogue screen with:
+Introductory Line: A personalized message that sets the tone for the character’s personality.
+Response Options: The player can ask questions or see statements related to the murder.
+Each response provides new clues or deflects suspicion.
+Clue Gathering:
+
+Some statements from characters reveal key events (e.g., “Ilan saw Michal in the garden”).
+Players can note down clues or track them within the game.
+Clue Review
+Optional Feature:
+A dedicated section for reviewing collected clues.
+Summarizes important information (e.g., who was where, suspicious actions).
+Accusation Phase
+Making an Accusation:
+
+After gathering enough information, the player selects the character they believe is the murderer.
+The player justifies their choice by reviewing clues they’ve gathered.
+Outcome:
+
+If the player correctly accuses Michal:
+A dramatic reveal scene plays out, where Michal confesses and explains her motives.
+If the player accuses incorrectly:
+The game explains why the choice was wrong and encourages another attempt.
+Ending
+Resolution:
+
+A summary of the case and the player’s performance is displayed.
+The game might include replay options to explore alternate dialogue paths or improve scores.
+Replayability:
+
+The user can restart to try different questioning approaches or discover hidden dialogues.

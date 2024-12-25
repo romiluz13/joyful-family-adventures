@@ -1,31 +1,28 @@
-import { Character } from '../types/Character';
-import { RACHEL, ROM, ILAN, MICHAL, NETA } from '../data/characters';
+class CharacterManager {
+  private characters: Map<string, Character> = new Map();
 
-export class CharacterManager {
-  private characters: Map<string, Character>;
-
-  constructor() {
-    this.characters = new Map([
-      [RACHEL.id, RACHEL],
-      [ROM.id, ROM],
-      [ILAN.id, ILAN],
-      [MICHAL.id, MICHAL],
-      [NETA.id, NETA]
-    ]);
+  addCharacter(character: Character): void {
+    this.characters.set(character.id, character);
   }
 
-  public getCharacter(id: string): Character | undefined {
-    return this.characters.get(id);
+  getCharacterTestimony(characterId: string): string[] {
+    return this.characters.get(characterId)?.testimony || [];
   }
 
-  public getAllCharacters(): Character[] {
-    return Array.from(this.characters.values());
+  checkTestimonyTruth(characterId: string, testimonyIndex: number): boolean {
+    const character = this.characters.get(characterId);
+    return character ? !character.isLying[testimonyIndex] : false;
   }
 
-  public updateCharacterLocation(characterId: string, newLocation: string): void {
+  getRelationship(character1Id: string, character2Id: string): Relationship | null {
+    const character = this.characters.get(character1Id);
+    return character?.relationships.get(character2Id) || null;
+  }
+
+  updateCharacterLocation(characterId: string, newLocation: Location): void {
     const character = this.characters.get(characterId);
     if (character) {
-      // Update character location logic here
+      character.location = newLocation;
     }
   }
 } 
