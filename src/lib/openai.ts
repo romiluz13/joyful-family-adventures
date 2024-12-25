@@ -1,9 +1,9 @@
+
 import OpenAI from "openai";
 
-// Initialize OpenAI client
 const openai = new OpenAI({
-  apiKey: "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",
-  dangerouslyAllowBrowser: true, // Note: In production, you should use a backend
+  apiKey: import.meta.env.VITE_OPENAI_API_KEY,
+  dangerouslyAllowBrowser: true,
 });
 
 // Character personalities and backgrounds
@@ -69,19 +69,12 @@ export async function getCharacterResponse(
   ];
 
   try {
-    const completion = await fetch('https://api.openai.com/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${import.meta.env.VITE_OPENAI_API_KEY}`
-      },
-      body: JSON.stringify({
-        messages,
-        model: "gpt-3.5-turbo",
-        temperature: 0.7,
-        max_tokens: 150
-      })
-    }).then(res => res.json());
+    const completion = await openai.chat.completions.create({
+      messages: messages as any,
+      model: "gpt-3.5-turbo",
+      temperature: 0.7,
+      max_tokens: 150
+    });
 
     return completion.choices[0]?.message?.content || "I'm not sure how to respond to that.";
   } catch (error) {
@@ -90,4 +83,4 @@ export async function getCharacterResponse(
   }
 }
 
-export type { OpenAI }; 
+export type { OpenAI };
