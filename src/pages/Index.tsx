@@ -1,13 +1,43 @@
-// Update this page (the content is just a fallback if you fail to update the page)
+import { GameProvider } from "@/contexts/GameContext";
+import { useGame } from "@/contexts/GameContext";
+import WelcomeScreen from "@/components/WelcomeScreen";
+import CharacterSelect from "@/components/CharacterSelect";
+import { useToast } from "@/components/ui/use-toast";
+
+const GameContent = () => {
+  const { gameState, setGameState, setSelectedCharacter } = useGame();
+  const { toast } = useToast();
+
+  const handleStart = () => {
+    setGameState("select");
+  };
+
+  const handleSelectCharacter = (character: string) => {
+    setSelectedCharacter(character);
+    toast({
+      title: "Character Selected!",
+      description: `You chose to interact with ${character}!`,
+    });
+    // For now, we'll just show a toast. Later we can transition to the game screen
+    // setGameState("play");
+  };
+
+  if (gameState === "welcome") {
+    return <WelcomeScreen onStart={handleStart} />;
+  }
+
+  if (gameState === "select") {
+    return <CharacterSelect onSelectCharacter={handleSelectCharacter} />;
+  }
+
+  return null;
+};
 
 const Index = () => {
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-100">
-      <div className="text-center">
-        <h1 className="text-4xl font-bold mb-4">Welcome to Your Blank App</h1>
-        <p className="text-xl text-gray-600">Start building your amazing project here!</p>
-      </div>
-    </div>
+    <GameProvider>
+      <GameContent />
+    </GameProvider>
   );
 };
 
