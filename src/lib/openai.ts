@@ -56,15 +56,84 @@ export const timeline = {
 };
 
 // Game state and core mystery elements
-export const gameState = {
-  victimName: "Omri",
-  murderLocation: "study",
-  murderWeapon: "poisoned tea",
-  timeOfMurder: "around midnight",
-  murderer: "Michal",
-  motive: "Omri discovered Michal's secret plan to sell the family business",
-  victimPersonality: "Witty and tech-savvy, loved teasing others in a friendly way about their tech knowledge"
+interface GameState {
+  killer: string;
+  motive: string;
+  weapon: string;
+  location: string;
+  timeOfDeath: string;
+}
+
+const weapons = [
+  "kitchen knife",
+  "heavy book",
+  "garden shears",
+  "old trophy",
+  "poisoned tea"
+];
+
+const locations = [
+  "kitchen",
+  "garden",
+  "study room",
+  "living room",
+  "backyard"
+];
+
+const timeSlots = [
+  "just after dinner",
+  "late at night",
+  "early morning",
+  "during afternoon tea",
+  "before breakfast"
+];
+
+const motives = {
+  Rachel: [
+    "Omri threatened to send her dogs to a shelter",
+    "Omri was planning to sell the family house",
+    "Omri discovered her gambling debts"
+  ],
+  Rom: [
+    "Omri was going to expose his failed startup",
+    "Omri refused to invest in his new tech venture",
+    "Omri threatened to reveal his internet scam"
+  ],
+  Ilan: [
+    "Omri discovered his secret second family",
+    "Omri was going to change the will",
+    "Omri found evidence of his past crimes"
+  ],
+  Michal: [
+    "Omri was about to reveal her affair",
+    "Omri threatened to take away her inheritance",
+    "Omri discovered her stolen family heirlooms"
+  ],
+  Neta: [
+    "Omri knew about her fake pregnancy",
+    "Omri was going to expose her true identity",
+    "Omri discovered she was stealing from the family"
+  ]
 };
+
+function selectRandomItem<T>(items: T[]): T {
+  return items[Math.floor(Math.random() * items.length)];
+}
+
+export function initializeGameState(): GameState {
+  const possibleKillers = ["Rachel", "Rom", "Ilan", "Michal", "Neta"];
+  const killer = selectRandomItem(possibleKillers);
+  
+  return {
+    killer,
+    weapon: selectRandomItem(weapons),
+    location: selectRandomItem(locations),
+    timeOfDeath: selectRandomItem(timeSlots),
+    motive: selectRandomItem(motives[killer])
+  };
+}
+
+export const gameState = initializeGameState();
 
 // Define clue categories to help track progress
 export const clueCategories = {
@@ -351,6 +420,20 @@ Remember: Never directly state if you are the murderer. Use your character's uni
     }
     throw error;
   }
+}
+
+export function checkAccusation(accusedCharacter: string): {
+  correct: boolean;
+  explanation: string;
+} {
+  const isCorrect = accusedCharacter === gameState.killer;
+  
+  return {
+    correct: isCorrect,
+    explanation: isCorrect
+      ? `Correct! ${gameState.killer} killed Omri in the ${gameState.location} with the ${gameState.weapon} ${gameState.timeOfDeath} because ${gameState.motive}.`
+      : `Wrong! Keep investigating. The real killer is still out there.`
+  };
 }
 
 export type { OpenAI, GameContext, ChatMessage, MessageRole };
