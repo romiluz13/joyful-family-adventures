@@ -19,6 +19,15 @@ export function CharacterCard({ name, isSelected, onSelect }: CharacterCardProps
     Neta: 'from-game-purple to-game-green'
   };
 
+  // Concise character summaries
+  const summaries = {
+    Rachel: "Grandmother with chatty dogs",
+    Rom: "Tech-obsessed uncle",
+    Ilan: "Observant grandfather",
+    Michal: "Busy mother",
+    Neta: "Pregnant, often awake at night"
+  };
+
   return (
     <motion.div
       whileHover={{ scale: 1.02 }}
@@ -38,36 +47,30 @@ export function CharacterCard({ name, isSelected, onSelect }: CharacterCardProps
         ${isSelected ? 'opacity-30' : 'opacity-10'}
       `} />
 
-      <div className="relative p-4 space-y-2">
+      <div className="relative p-3 space-y-2">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
-            <FaUserSecret className="w-6 h-6 text-primary" />
+          <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
+            <FaUserSecret className="w-4 h-4 text-primary" />
           </div>
           <div>
-            <h3 className="font-bold text-lg">{name}</h3>
-            <p className="text-sm text-muted-foreground">{profile.role}</p>
+            <h3 className="font-bold text-base">{name}</h3>
+            <p className="text-xs text-muted-foreground">{summaries[name]}</p>
           </div>
         </div>
 
-        <motion.div
-          initial={{ opacity: 0, height: 0 }}
-          animate={{ 
-            opacity: isSelected ? 1 : 0,
-            height: isSelected ? 'auto' : 0
-          }}
-          transition={{ duration: 0.2 }}
-          className="space-y-2 overflow-hidden"
-        >
-          <p className="text-sm italic">{profile.personality}</p>
-          <div className="text-xs space-y-1">
-            {profile.quirks.map((quirk, index) => (
-              <div key={index} className="flex items-center gap-2">
-                <span className="w-1 h-1 rounded-full bg-primary" />
-                <span>{quirk}</span>
-              </div>
-            ))}
-          </div>
-        </motion.div>
+        {isSelected && (
+          <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ 
+              opacity: 1,
+              height: 'auto'
+            }}
+            transition={{ duration: 0.2 }}
+            className="text-xs text-muted-foreground pt-2 border-t"
+          >
+            {profile.role}
+          </motion.div>
+        )}
       </div>
     </motion.div>
   );
