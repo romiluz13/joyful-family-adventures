@@ -1,13 +1,14 @@
 import { useState, useEffect } from 'react';
-import { getCharacterResponse, checkAccusation } from '@/lib/openai';
+import { getCharacterResponse, checkAccusation, GAME_TITLE, GAME_INTRO, type GameContext } from '@/lib/openai';
 import { CharacterCard } from './CharacterCard';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from './ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from './ui/dialog';
 import { RadioGroup, RadioGroupItem } from './ui/radio-group';
 import { Label } from './ui/label';
 import { ScrollArea } from './ui/scroll-area';
 import { motion, AnimatePresence } from 'framer-motion';
+import { Alert, AlertDescription } from './ui/alert';
 import type { CreateTypes } from 'canvas-confetti';
 
 // Import confetti dynamically to avoid SSR issues
@@ -35,6 +36,11 @@ export default function GameScreen() {
   const [gameStartTime] = useState<number>(Date.now());
   const [gameEnded, setGameEnded] = useState(false);
   const [endGameMessage, setEndGameMessage] = useState('');
+  const [guessesLeft, setGuessesLeft] = useState(3);
+  const [lastGuessResult, setLastGuessResult] = useState<{
+    correct: boolean;
+    message: string;
+  } | null>(null);
 
   const characters = ['Rachel', 'Rom', 'Ilan', 'Michal', 'Neta'];
 
@@ -49,6 +55,11 @@ export default function GameScreen() {
     setMessages([]);
   };
 
+  const extractImportantInfo = (text: string): string | null => {
+    const match = text.match(/\*(.*?)\*/);
+    return match ? match[1].trim() : null;
+  };
+
   const handleSendMessage = async (content: string) => {
     if (!selectedCharacter) return;
 
@@ -58,10 +69,22 @@ export default function GameScreen() {
     setInputValue('');
 
     try {
+      const gameContext: GameContext = {
+        revealedClues: Object.values(notes).flat(),
+        accusationMade: guessesLeft < 3,
+        currentPhase: gameEnded ? 'resolution' : guessesLeft < 3 ? 'accusation' : 'investigation',
+        timelineProgress: {
+          dayBefore: messages.some(m => m.content.toLowerCase().includes('day before')),
+          murderNight: messages.some(m => m.content.toLowerCase().includes('murder night')),
+          dayAfter: messages.some(m => m.content.toLowerCase().includes('day after'))
+        }
+      };
+
       const response = await getCharacterResponse(
         selectedCharacter,
         content,
-        messages
+        messages,
+        gameContext
       );
 
       const assistantMessage: Message = {
@@ -72,21 +95,16 @@ export default function GameScreen() {
 
       setMessages(prev => [...prev, assistantMessage]);
       
-      // Extract important information for notes
-      const cleanedResponse = response.toLowerCase().trim();
-      if (cleanedResponse.includes('saw') || 
-          cleanedResponse.includes('heard') || 
-          cleanedResponse.includes('found') ||
-          cleanedResponse.includes('noticed')) {
-        const normalizedNote = response.trim();
+      // Extract important information (marked with asterisks)
+      const importantInfo = extractImportantInfo(response);
+      if (importantInfo) {
         setNotes(prev => {
           const characterNotes = prev[selectedCharacter] || [];
-          if (!characterNotes.some(note => 
-            note.toLowerCase().includes(normalizedNote.toLowerCase())
-          )) {
+          // Check for duplicates using exact match
+          if (!characterNotes.includes(importantInfo)) {
             return {
               ...prev,
-              [selectedCharacter]: [...characterNotes, normalizedNote]
+              [selectedCharacter]: [...characterNotes, importantInfo]
             };
           }
           return prev;
@@ -107,11 +125,14 @@ export default function GameScreen() {
   };
 
   const handleMakeAccusation = () => {
-    setAccusationOpen(true);
+    if (guessesLeft > 0) {
+      setAccusationOpen(true);
+      setLastGuessResult(null);
+    }
   };
 
   const handleAccusationSubmit = () => {
-    if (!accusedCharacter) return;
+    if (!accusedCharacter || guessesLeft <= 0) return;
 
     const result = checkAccusation(accusedCharacter);
     const timeTaken = Math.floor((Date.now() - gameStartTime) / 1000);
@@ -120,17 +141,32 @@ export default function GameScreen() {
     
     const timeMessage = `\nTime taken: ${minutes} minutes and ${seconds} seconds.`;
     
-    if (result.correct && confetti) {
-      confetti({
-        particleCount: 100,
-        spread: 70,
-        origin: { y: 0.6 }
+    if (result.correct) {
+      if (confetti) {
+        confetti({
+          particleCount: 100,
+          spread: 70,
+          origin: { y: 0.6 }
+        });
+      }
+      setEndGameMessage(result.explanation + timeMessage);
+      setGameEnded(true);
+      setLastGuessResult({
+        correct: true,
+        message: "Congratulations! You've found the killer!"
       });
+    } else {
+      setGuessesLeft(prev => prev - 1);
+      setLastGuessResult({
+        correct: false,
+        message: `Wrong! You have ${guessesLeft - 1} guesses left.`
+      });
+      
+      if (guessesLeft === 1) { // Last guess was wrong
+        setEndGameMessage(result.explanation + "\n\nGame Over! You're out of guesses." + timeMessage);
+        setGameEnded(true);
+      }
     }
-
-    setEndGameMessage(result.explanation + timeMessage);
-    setGameEnded(true);
-    setAccusationOpen(false);
   };
 
   const resetGame = () => {
@@ -141,7 +177,8 @@ export default function GameScreen() {
     <div className="h-screen flex flex-col md:flex-row">
       {/* Character Selection Panel */}
       <div className="w-full md:w-64 p-4 border-r">
-        <h2 className="text-lg font-bold mb-4">Suspects</h2>
+        <h2 className="text-lg font-bold mb-4">{GAME_TITLE}</h2>
+        <p className="text-sm text-muted-foreground mb-4">{GAME_INTRO}</p>
         <div className="space-y-2">
           {characters.map(character => (
             <CharacterCard
@@ -155,7 +192,7 @@ export default function GameScreen() {
         
         {/* Notes Section */}
         <div className="mt-4">
-          <h3 className="text-sm font-semibold mb-2">Notes</h3>
+          <h3 className="text-sm font-semibold mb-2">Important Clues</h3>
           <ScrollArea className="h-48 rounded-md border p-2">
             {Object.entries(notes).map(([character, characterNotes]) => (
               <div key={character} className="mb-2">
@@ -173,9 +210,9 @@ export default function GameScreen() {
         <Button 
           className="w-full mt-4" 
           onClick={handleMakeAccusation}
-          disabled={gameEnded}
+          disabled={gameEnded || guessesLeft <= 0}
         >
-          Make Accusation
+          Make Accusation ({guessesLeft} guesses left)
         </Button>
       </div>
 
@@ -232,9 +269,18 @@ export default function GameScreen() {
           <DialogHeader>
             <DialogTitle>Make Your Accusation</DialogTitle>
             <DialogDescription>
-              Who do you think killed Omri?
+              Who do you think killed Omri? Choose carefully, you have {guessesLeft} {guessesLeft === 1 ? 'guess' : 'guesses'} left.
             </DialogDescription>
           </DialogHeader>
+          
+          {lastGuessResult && (
+            <Alert variant={lastGuessResult.correct ? "default" : "destructive"}>
+              <AlertDescription>
+                {lastGuessResult.message}
+              </AlertDescription>
+            </Alert>
+          )}
+
           <RadioGroup value={accusedCharacter} onValueChange={setAccusedCharacter}>
             {characters.map(character => (
               <div key={character} className="flex items-center space-x-2">
@@ -243,9 +289,12 @@ export default function GameScreen() {
               </div>
             ))}
           </RadioGroup>
-          <Button onClick={handleAccusationSubmit} disabled={!accusedCharacter}>
-            Submit Accusation
-          </Button>
+          
+          <DialogFooter>
+            <Button onClick={handleAccusationSubmit} disabled={!accusedCharacter}>
+              Submit Accusation
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
 
