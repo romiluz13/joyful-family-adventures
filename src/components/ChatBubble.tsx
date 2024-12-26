@@ -1,82 +1,49 @@
-import React, { useEffect, useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { cn } from '@/lib/utils';
+import React from "react";
+import { motion } from "framer-motion";
+import { cn } from "@/lib/utils";
+import { FiCalendar } from "react-icons/fi";
 
 interface ChatBubbleProps {
   content: string;
   isUser: boolean;
-  timestamp?: Date;
+  timestamp: Date;
+  timelineReference?: string;
 }
 
-export function ChatBubble({ content, isUser, timestamp }: ChatBubbleProps) {
-  const [isTyping, setIsTyping] = useState(!isUser);
-  const [displayedContent, setDisplayedContent] = useState('');
-
-  useEffect(() => {
-    if (!isUser) {
-      setIsTyping(true);
-      setDisplayedContent('');
-      let index = 0;
-      const timer = setInterval(() => {
-        if (index < content.length) {
-          setDisplayedContent(prev => prev + content[index]);
-          index++;
-        } else {
-          setIsTyping(false);
-          clearInterval(timer);
-        }
-      }, 30); // Adjust typing speed here
-
-      return () => clearInterval(timer);
-    } else {
-      setDisplayedContent(content);
-    }
-  }, [content, isUser]);
+export function ChatBubble({ content, isUser, timestamp, timelineReference }: ChatBubbleProps) {
+  const formatTimelineRef = (ref: string) => {
+    return ref.split(/(?=[A-Z])/).join(" ");
+  };
 
   return (
-    <AnimatePresence>
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        exit={{ opacity: 0, y: -20 }}
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, y: -20 }}
+      className={cn(
+        "flex flex-col",
+        isUser ? "items-end" : "items-start"
+      )}
+    >
+      {timelineReference && (
+        <div className="flex items-center gap-1 text-xs text-muted-foreground mb-1">
+          <FiCalendar className="h-3 w-3" />
+          <span>{formatTimelineRef(timelineReference)}</span>
+        </div>
+      )}
+      <div
         className={cn(
-          "flex",
-          isUser ? "justify-end" : "justify-start"
+          "rounded-lg px-4 py-2 max-w-[80%]",
+          isUser
+            ? "bg-primary text-primary-foreground"
+            : "bg-muted"
         )}
       >
-        <div
-          className={cn(
-            "max-w-[80%] rounded-lg p-3 relative group",
-            isUser
-              ? "bg-primary text-primary-foreground"
-              : "bg-muted"
-          )}
-        >
-          {isUser ? displayedContent : (
-            <>
-              {displayedContent}
-              {isTyping && (
-                <motion.span
-                  animate={{ opacity: [0, 1, 0] }}
-                  transition={{ repeat: Infinity, duration: 1 }}
-                >
-                  ▋
-                </motion.span>
-              )}
-            </>
-          )}
-          
-          {timestamp && (
-            <motion.div
-              initial={{ opacity: 0 }}
-              whileHover={{ opacity: 1 }}
-              className="absolute -bottom-5 left-0 text-xs text-muted-foreground opacity-0 group-hover:opacity-100"
-            >
-              {timestamp.toLocaleTimeString()}
-            </motion.div>
-          )}
-        </div>
-      </motion.div>
-    </AnimatePresence>
+        <p className="text-sm">{content}</p>
+      </div>
+      <span className="text-xs text-muted-foreground mt-1">
+        {timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+      </span>
+    </motion.div>
   );
 } 
