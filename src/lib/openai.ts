@@ -34,7 +34,7 @@ interface CharacterProfile {
 }
 
 // Character personalities and backgrounds with murder mystery elements
-const characterProfiles: Record<string, CharacterProfile> = {
+export const characterProfiles: Record<string, CharacterProfile> = {
   Rachel: {
     role: "grandmother",
     personality: "Loud, expressive, and humorous even in serious moments",
@@ -43,7 +43,8 @@ const characterProfiles: Record<string, CharacterProfile> = {
     knownClues: [
       "saw Michal preparing tea suspiciously",
       "heard an argument about the family business",
-      "noticed Omri was unusually quiet at dinner"
+      "noticed Omri was unusually quiet at dinner",
+      "saw Rom and Omri having an argument"
     ],
     relationship: "Victim's mother, deeply affected but uses humor to cope",
     quirks: [
