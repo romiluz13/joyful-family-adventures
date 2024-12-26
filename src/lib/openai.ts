@@ -177,6 +177,27 @@ function getTimelineKnowledge(character: string, gameContext: GameContext): stri
   return knowledge.join('\n');
 }
 
+// Message type definition
+type MessageRole = 'system' | 'user' | 'assistant';
+
+interface ChatMessage {
+  role: MessageRole;
+  content: string;
+  character?: string;
+}
+
+function getRecentDiscussion(conversationHistory: ChatMessage[]): string {
+  return conversationHistory
+    .slice(-5)
+    .map(msg => {
+      if (msg.role === 'assistant' && msg.character) {
+        return `${msg.character}: ${msg.content}`;
+      }
+      return `Detective: ${msg.content}`;
+    })
+    .join('\n');
+}
+
 export async function getCharacterResponse(
   character: string,
   userMessage: string,
@@ -263,11 +284,12 @@ export async function getCharacterResponse(
     9. Build on or challenge others' statements when appropriate
   `;
 
-  const messages = [
+  const messages: ChatMessage[] = [
     { role: 'system', content: systemMessage },
     ...conversationHistory.map(msg => ({
-      role: msg.role,
-      content: msg.content
+      role: msg.role as MessageRole,
+      content: msg.content,
+      character: msg.character
     })),
     { role: 'user', content: userMessage }
   ];
@@ -275,7 +297,7 @@ export async function getCharacterResponse(
   try {
     const response = await openai.chat.completions.create({
       model: 'gpt-4o-mini',
-      messages: messages as any,
+      messages: messages,
       temperature: 0.7,
       max_tokens: 150,
       presence_penalty: 0.6,
@@ -379,6 +401,7 @@ interface Evidence {
   visibilityThreshold: number; // When it becomes noticeable
   connections: string[];       // Related evidence IDs
   contradictions: string[];    // Contradicting evidence IDs
+  characterTrust: number;  // Add this property instead of nested visibilityConditions
 }
 
 // Dynamic Difficulty Adjustment
@@ -409,43 +432,321 @@ interface TimelineEvent {
   impactOnRelationships: Record<string, number>;
 }
 
-function updateCharacterBehavior(
+// Improved Interrogation System
+interface InterrogationState {
+  activeCharacters: string[];
+  currentTension: number;
+  revealedInformation: Set<string>;
+  lastSpeaker: string;
+  currentTopic: string;
+  topicDepth: number;
+}
+
+// Helper Functions
+function buildCharacterKnowledge(character: string): any {
+  const gameContext: GameContext = {
+    revealedClues: [],
+    accusationMade: false,
+    currentPhase: 'investigation',
+    timelineProgress: { 
+      dayBefore: true, 
+      murderNight: true, 
+      dayAfter: true 
+    }
+  };
+  
+  return {
+    timeline: getTimelineKnowledge(character, gameContext),
+    observations: generateInnocentObservations(character),
+    personality: characters[character]
+  };
+}
+
+function calculateTensionLevel(character: string, state: InterrogationState): number {
+  const baseLevel = state.currentTension;
+  const recentActivity = state.activeCharacters.includes(character) ? 0.2 : 0;
+  return Math.min(baseLevel + recentActivity, 1.0);
+}
+
+function checkTopicRelevance(message: string, knowledge: any): boolean {
+  const topics = ['weapon', 'location', 'time', 'motive'];
+  return topics.some(topic => message.toLowerCase().includes(topic));
+}
+
+function generateDetailedResponse(character: string, message: string): Promise<string> {
+  return getCharacterResponse(character, message, [], { 
+    revealedClues: [], 
+    accusationMade: false,
+    currentPhase: 'investigation',
+    timelineProgress: { dayBefore: true, murderNight: true, dayAfter: true }
+  });
+}
+
+function generateDefensiveResponse(character: string): Promise<string> {
+  const defensiveMessage = "I'd rather not discuss that right now.";
+  return Promise.resolve(defensiveMessage);
+}
+
+function generateNormalResponse(character: string, message: string): Promise<string> {
+  return getCharacterResponse(character, message, [], {
+    revealedClues: [],
+    accusationMade: false,
+    currentPhase: 'investigation',
+    timelineProgress: { dayBefore: true, murderNight: true, dayAfter: true }
+  });
+}
+
+function calculateStressLevel(character: string, state: InterrogationState): number {
+  const baseTension = state.currentTension;
+  const topicStress = state.currentTopic === 'weapon' || state.currentTopic === 'location' ? 0.3 : 0;
+  return Math.min(baseTension + topicStress, 1.0);
+}
+
+function generateDeflection(character: string): Promise<string> {
+  const deflection = "Let's talk about something else. Have you asked Rom about what he saw?";
+  return Promise.resolve(deflection);
+}
+
+function generateHelpfulResponse(character: string): Promise<string> {
+  const helpful = "I want to help. What else would you like to know?";
+  return Promise.resolve(helpful);
+}
+
+function validateTimeline(timeOfDeath: string): boolean {
+  const validTimes = ['early evening', 'midnight', 'late night', 'before dawn', 'during dinner'];
+  return validTimes.includes(timeOfDeath);
+}
+
+function checkWeaponAccessibility(weapon: string, location: string): boolean {
+  const weaponLocations = {
+    'kitchen knife': ['kitchen', 'dining room'],
+    'heavy vase': ['living room', 'study'],
+    'poison': ['kitchen', 'bathroom'],
+    'rope': ['garden', 'garage'],
+    'candlestick': ['living room', 'study', 'dining room']
+  };
+  return weaponLocations[weapon as keyof typeof weaponLocations]?.includes(location) ?? false;
+}
+
+function validateMotive(killer: string, motive: string): boolean {
+  return motives[killer]?.includes(motive) ?? false;
+}
+
+function checkClueRelevance(clue: Evidence, topic: string): boolean {
+  return clue.type === 'physical' ? topic === 'weapon' || topic === 'location' : true;
+}
+
+function checkRevealTiming(clue: Evidence, state: InterrogationState): boolean {
+  return state.topicDepth >= 2;
+}
+
+function checkCharacterWillingness(character: string, clue: Evidence): boolean {
+  return clue.characterTrust > 0.5;
+}
+
+function generateTransitionResponse(): string {
+  return "Perhaps we should hear from someone else?";
+}
+
+function isTopicRelated(message: string, currentTopic: string): boolean {
+  return message.toLowerCase().includes(currentTopic.toLowerCase());
+}
+
+function extractTopic(message: string): string {
+  const topics = ['weapon', 'location', 'time', 'motive', 'alibi'];
+  return topics.find(topic => message.toLowerCase().includes(topic)) || 'general';
+}
+
+// Group Interrogation System
+interface GroupDiscussionState {
+  activeCharacters: string[];
+  currentSpeaker: string | null;
+  lastSpeaker: string | null;
+  discussionTopic: string;
+  tensionLevel: number;
+  revealedClues: Set<string>;
+  characterEmotions: Record<string, {
+    stress: number;
+    defensiveness: number;
+    suspicion: number;
+  }>;
+}
+
+let groupDiscussion: GroupDiscussionState = {
+  activeCharacters: [],
+  currentSpeaker: null,
+  lastSpeaker: null,
+  discussionTopic: 'general',
+  tensionLevel: 0,
+  revealedClues: new Set(),
+  characterEmotions: {}
+};
+
+// Enhanced character response system
+export async function getGroupResponse(
   character: string,
-  gameContext: GameContext,
-  memory: CharacterMemory,
-  personality: PersonalityTraits
-): void {
-  const stressThreshold = personality.emotionalControl * 0.7;
-  const isUnderPressure = memory.emotionalState.stress > stressThreshold;
+  userMessage: string,
+  conversationHistory: { role: string; content: string; character?: string }[],
+  gameContext: GameContext
+): Promise<string> {
+  if (!gameState) throw new Error('Game state not initialized');
 
-  // Adjust behavior based on emotional state
-  if (isUnderPressure) {
-    memory.emotionalState.defensiveness += 0.2;
-    memory.emotionalState.nervousness += 0.15;
-  }
+  const isKiller = character === gameState.killer;
+  const characterProfile = characters[character];
+  
+  // Update group discussion state
+  updateGroupState(character, userMessage);
+  
+  // Get relevant reactions from other characters
+  const recentDiscussion = getRecentDiscussion(conversationHistory);
+  const otherCharactersReactions = getRelevantReactions(character, recentDiscussion);
+  
+  // Build enhanced character knowledge
+  const characterKnowledge = `
+    ${isKiller ? getKillerKnowledge(character) : getInnocentKnowledge(character)}
+    
+    Recent Group Discussion:
+    ${recentDiscussion}
+    
+    Other Characters' Reactions:
+    ${otherCharactersReactions}
+    
+    Current Discussion Topic: ${groupDiscussion.discussionTopic}
+    Room Tension Level: ${groupDiscussion.tensionLevel}
+    
+    Group Discussion Rules:
+    1. React naturally to what others have said
+    2. Build on or challenge others' statements
+    3. Show appropriate emotional reactions
+    4. Maintain consistent story across interactions
+    5. Reference previous statements when relevant
+    6. Form alliances or conflicts based on revealed information
+    7. Express suspicion or support for others' claims
+  `;
 
-  // Update suspicions based on known clues
-  for (const clue of memory.knownClues) {
-    // Logic to update suspicions...
+  const systemMessage = `
+    You are ${character}, participating in a group investigation about Omri's murder.
+    ${characterProfile}
+    ${characterKnowledge}
+
+    Response Guidelines:
+    1. Stay in character and maintain your personality
+    2. React to recent statements by other suspects
+    3. Show appropriate emotional state
+    4. Reference specific details from the discussion
+    5. Build on or challenge others' claims naturally
+    6. Keep responses concise (2-3 sentences)
+    7. Mark important revelations with asterisks (*like this*)
+    8. Avoid AI-style language or prefixes
+  `;
+
+  try {
+    const response = await openai.chat.completions.create({
+      model: 'gpt-4o-mini',
+      messages: [
+        { role: 'system', content: systemMessage },
+        ...conversationHistory.map(msg => ({
+          role: msg.role as MessageRole,
+          content: msg.content,
+          character: msg.character
+        })),
+        { role: 'user', content: userMessage }
+      ],
+      temperature: 0.7,
+      max_tokens: 150,
+      presence_penalty: 0.6,
+      frequency_penalty: 0.3
+    });
+
+    const generatedResponse = response.choices[0]?.message?.content || 'I need a moment to think about that.';
+    updateEmotionsAndTension(character, generatedResponse);
+    return generatedResponse;
+  } catch (error) {
+    console.error('Error in group response:', error);
+    return 'I need a moment to collect my thoughts.';
   }
 }
 
-function generateCharacterResponse(
-  character: string,
-  context: GameContext,
-  memory: CharacterMemory,
-  personality: PersonalityTraits,
-  relationships: RelationshipNetwork
-): string {
-  const isKiller = character === gameState?.killer;
-  const stressLevel = memory.emotionalState.stress;
-  const deceptionSuccess = Math.random() < personality.deceptionSkill;
-
-  if (isKiller && !deceptionSuccess) {
-    // Add subtle tells in the response
-    memory.emotionalState.nervousness += 0.1;
+function updateGroupState(character: string, message: string): void {
+  groupDiscussion.lastSpeaker = groupDiscussion.currentSpeaker;
+  groupDiscussion.currentSpeaker = character;
+  
+  // Update topic if new one is detected
+  const newTopic = extractTopic(message);
+  if (newTopic !== 'general') {
+    groupDiscussion.discussionTopic = newTopic;
   }
+  
+  // Initialize character emotions if needed
+  if (!groupDiscussion.characterEmotions[character]) {
+    groupDiscussion.characterEmotions[character] = {
+      stress: 0,
+      defensiveness: 0,
+      suspicion: 0
+    };
+  }
+}
 
-  // Generate response based on all factors...
-  return "Character response considering all factors";
+function getRelevantReactions(character: string, recentDiscussion: string): string {
+  const reactions = [];
+  
+  for (const otherChar of groupDiscussion.activeCharacters) {
+    if (otherChar !== character) {
+      const emotion = groupDiscussion.characterEmotions[otherChar];
+      if (emotion.suspicion > 0.7) {
+        reactions.push(`${otherChar} seems very suspicious of your statements`);
+      } else if (emotion.stress > 0.7) {
+        reactions.push(`${otherChar} appears notably stressed by the discussion`);
+      }
+    }
+  }
+  
+  return reactions.join('\n');
+}
+
+function updateEmotionsAndTension(character: string, response: string): void {
+  const emotions = groupDiscussion.characterEmotions[character];
+  const isKiller = character === gameState?.killer;
+  
+  // Update character emotions based on response content
+  if (response.toLowerCase().includes(gameState?.weapon || '') || 
+      response.toLowerCase().includes(gameState?.location || '')) {
+    emotions.stress += isKiller ? 0.2 : 0.1;
+    emotions.defensiveness += isKiller ? 0.3 : 0.1;
+  }
+  
+  // Update group tension
+  const averageStress = Object.values(groupDiscussion.characterEmotions)
+    .reduce((sum, e) => sum + e.stress, 0) / groupDiscussion.activeCharacters.length;
+  groupDiscussion.tensionLevel = Math.min(1, averageStress);
+}
+
+function getKillerKnowledge(character: string): string {
+  if (!gameState) return '';
+  
+  return `
+    You are the killer. You killed Omri with the ${gameState.weapon} in the ${gameState.location} during ${gameState.timeOfDeath}.
+    Your motive was ${gameState.motive}.
+    
+    Current Group Dynamic:
+    - If others mention the weapon or location, show subtle stress
+    - React defensively to accusations but maintain composure
+    - Try to redirect suspicion naturally
+    - Build alliances with characters who trust you
+    - Challenge suspicious claims about your whereabouts
+  `;
+}
+
+function getInnocentKnowledge(character: string): string {
+  return `
+    You are innocent and want to help solve the case.
+    Your observations: ${generateInnocentObservations(character)}
+    
+    Current Group Dynamic:
+    - Support claims that align with your observations
+    - Question inconsistencies in others' stories
+    - Form alliances with those who seem trustworthy
+    - Share relevant information when appropriate
+    - React genuinely to new revelations
+  `;
 }
