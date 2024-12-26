@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { getCharacterResponse, checkAccusation, GAME_TITLE, GAME_INTRO, type GameContext } from '@/lib/openai';
+import { getCharacterResponse, checkAccusation, GAME_TITLE, GAME_INTRO } from '@/lib/openai';
 import { CharacterCard } from './CharacterCard';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
@@ -69,22 +69,10 @@ export default function GameScreen() {
     setInputValue('');
 
     try {
-      const gameContext: GameContext = {
-        revealedClues: Object.values(notes).flat(),
-        accusationMade: guessesLeft < 3,
-        currentPhase: gameEnded ? 'resolution' : guessesLeft < 3 ? 'accusation' : 'investigation',
-        timelineProgress: {
-          dayBefore: messages.some(m => m.content.toLowerCase().includes('day before')),
-          murderNight: messages.some(m => m.content.toLowerCase().includes('murder night')),
-          dayAfter: messages.some(m => m.content.toLowerCase().includes('day after'))
-        }
-      };
-
       const response = await getCharacterResponse(
         selectedCharacter,
         content,
-        messages,
-        gameContext
+        messages
       );
 
       const assistantMessage: Message = {
@@ -100,8 +88,13 @@ export default function GameScreen() {
       if (importantInfo) {
         setNotes(prev => {
           const characterNotes = prev[selectedCharacter] || [];
-          // Check for duplicates using exact match
-          if (!characterNotes.includes(importantInfo)) {
+          // Normalize text for comparison
+          const normalizedInfo = importantInfo.toLowerCase().trim();
+          const isDuplicate = characterNotes.some(note => 
+            note.toLowerCase().trim() === normalizedInfo
+          );
+          
+          if (!isDuplicate) {
             return {
               ...prev,
               [selectedCharacter]: [...characterNotes, importantInfo]
@@ -162,11 +155,13 @@ export default function GameScreen() {
         message: `Wrong! You have ${guessesLeft - 1} guesses left.`
       });
       
-      if (guessesLeft === 1) { // Last guess was wrong
+      if (guessesLeft === 1) {
         setEndGameMessage(result.explanation + "\n\nGame Over! You're out of guesses." + timeMessage);
         setGameEnded(true);
       }
     }
+    
+    setAccusationOpen(false);
   };
 
   const resetGame = () => {
@@ -175,10 +170,9 @@ export default function GameScreen() {
 
   return (
     <div className="h-screen flex flex-col md:flex-row">
-      {/* Character Selection Panel */}
+      {/* Left Panel */}
       <div className="w-full md:w-64 p-4 border-r">
-        <h2 className="text-lg font-bold mb-4">{GAME_TITLE}</h2>
-        <p className="text-sm text-muted-foreground mb-4">{GAME_INTRO}</p>
+        <h2 className="text-lg font-bold mb-2">{GAME_TITLE}</h2>
         <div className="space-y-2">
           {characters.map(character => (
             <CharacterCard
