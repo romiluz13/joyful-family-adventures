@@ -2,44 +2,122 @@ Introduction:
 
 A short description of the murder mystery is displayed.
 The user is informed that Omri has been murdered and they need to interrogate the suspects to uncover the truth.
-Action:
 
-A “Start Investigation” button takes the player to the main gameplay screen.
-Gameplay Screen
-List of Characters:
+Game Setup:
+- The game randomly selects a killer from the suspects (Rachel, Rom, Ilan, Michal, or Neta)
+- A murder weapon is chosen from: kitchen knife, heavy book, garden shears, old trophy, or poisoned tea
+- Location is selected from: kitchen, garden, study room, living room, or backyard
+- Time of death is picked from: just after dinner, late night, early morning, during afternoon tea, or before breakfast
+- A character-specific motive is assigned to the killer
 
-The player is presented with a list of suspects (Rachel, Rom, Ilan, Michal, and Neta).
-Each character is displayed as a button or interactive element.
-Interrogation:
+Game Interface:
+1. Header Section:
+   - Game title and introduction
+   - Timer display with millisecond precision
+   - Notes button with clue counter
+   - Mode toggle (Individual/Group interrogation)
 
-Clicking on a character opens a dialogue screen with:
-Introductory Line: A personalized message that sets the tone for the character’s personality.
-Response Options: The player can ask questions or see statements related to the murder.
-Each response provides new clues or deflects suspicion.
-Clue Gathering:
+2. Character Selection Area:
+   - Interactive character buttons
+   - Visual indicators for active/selected characters
+   - Accusation button with remaining guesses counter
+   - Group mode participant display
 
-Some statements from characters reveal key events (e.g., “Ilan saw Michal in the garden”).
-Players can note down clues or track them within the game.
-Clue Review
-Optional Feature:
-A dedicated section for reviewing collected clues.
-Summarizes important information (e.g., who was where, suspicious actions).
-Accusation Phase
-Making an Accusation:
+3. Investigation Notes Panel:
+   A. Timeline Tab:
+      - Search and filter functionality
+      - Categorized clues (location, weapon, motive, alibi, evidence, general)
+      - Time-based organization (before, during, after)
+      - Important clue marking system
+      - Clue source and timestamp tracking
 
-After gathering enough information, the player selects the character they believe is the murderer.
-The player justifies their choice by reviewing clues they’ve gathered.
-Outcome:
+   B. Suspects Tab:
+      - Detailed character descriptions
+      - Relationship status with Omri
+      - Family connections display
+      - Clue count per character
 
-If the player correctly accuses Michal:
-A dramatic reveal scene plays out, where Michal confesses and explains her motives.
-If the player accuses incorrectly:
-The game explains why the choice was wrong and encourages another attempt.
-Ending
-Resolution:
+   C. Family Tree Tab:
+      - Visual representation of family relationships
+      - Parent generation (Ilan & Rachel)
+      - Children's generation (Rom & Omri)
+      - Marriage connections
+      - Relationship descriptions
 
-A summary of the case and the player’s performance is displayed.
-The game might include replay options to explore alternate dialogue paths or improve scores.
-Replayability:
+Gameplay Features:
+1. Interrogation Modes:
+   - Individual: One-on-one conversations
+   - Group: Multiple characters present
+   - Character switching during investigation
 
-The user can restart to try different questioning approaches or discover hidden dialogues.
+2. Clue System:
+   - Manual clue selection through text highlighting
+   - Category classification
+   - Timeline placement
+   - Importance marking
+   - Source attribution
+
+3. Timer System:
+   - Precise timing with milliseconds
+   - Color changes based on remaining guesses
+   - High score tracking
+   - Time recording for completion
+
+4. Accusation System:
+   - Three attempts allowed
+   - Character selection interface
+   - Feedback on incorrect guesses
+   - Final resolution reveal
+
+Character Relationships:
+1. Family Structure:
+   - Rachel: Omri's Mother
+   - Ilan: Omri's Father
+   - Rom: Omri's Brother
+   - Michal: Omri's Wife
+   - Neta: Omri's Sister-in-law (Rom's Wife)
+
+2. Visual Elements:
+   - Color-coded relationship indicators
+   - Connection lines between family members
+   - Status indicators (deceased/living)
+   - Relationship labels
+
+Game State Management:
+1. Progress Tracking:
+   - Revealed clues
+   - Character interactions
+   - Time periods investigated
+   - Accusation attempts
+
+2. High Score System:
+   - Time-based scoring
+   - Success/failure recording
+   - Historical attempt tracking
+   - Local storage persistence
+
+Visual Design:
+1. Color Scheme:
+   - Purple-based dark theme
+   - Category-specific colors for clues
+   - Status-based highlighting
+   - Relationship indicators
+
+2. Interactive Elements:
+   - Hover effects on cards
+   - Selection indicators
+   - Mode toggles
+   - Dialog animations
+
+End Game:
+1. Resolution:
+   - Killer reveal
+   - Completion time display
+   - High score comparison
+   - Play again option
+
+2. Game Over States:
+   - Successful accusation
+   - Failed attempts
+   - Time recording
+   - Score saving

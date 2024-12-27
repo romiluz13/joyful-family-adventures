@@ -77,6 +77,14 @@ const motives: Record<string, string[]> = {
   ]
 };
 
+const characterRelationships = {
+  Rachel: { title: "Omri's Mother" },
+  Rom: { title: "Omri's Brother" },
+  Ilan: { title: "Omri's Father" },
+  Michal: { title: "Omri's Wife" },
+  Neta: { title: "Omri's Sister-in-law" }
+};
+
 let lastKiller: string | null = null;
 
 function selectRandomItem<T>(items: T[]): T {
@@ -137,41 +145,130 @@ const openai = new OpenAI({
   dangerouslyAllowBrowser: true
 });
 
-const timeline = {
+// Replace the static timeline with a dynamic one
+function generateTimeline(character: string): Record<string, Record<string, string>> {
+  if (!gameState) throw new Error('Game state not initialized');
+  
+  const isKiller = character === gameState.killer;
+  const killerKnowledge = {
+    weapon: gameState.weapon,
+    location: gameState.location,
+    time: gameState.timeOfDeath,
+    motive: gameState.motive
+  };
+
+  // Base timeline that changes based on killer
+  return {
   dayBefore: {
-    Rachel: "You witnessed the argument between Rom and Omri in the living room. Rom looked really angry.",
-    Rom: "You had a heated argument with Omri about your AI project. He mocked your sales pitch.",
-    Ilan: "You noticed tension between Omri and others throughout the day.",
-    Michal: "You were seen in the kitchen cleaning a knife and acting unusually tense.",
-    Neta: "You saw Michal cleaning a knife in the kitchen, which seemed odd."
-  },
+      Rachel: isKiller ? 
+        `You made sure to check if ${gameState.location} was empty during dinner.` :
+        gameState.killer === 'Rom' ? 
+          "*You saw Rom and Omri having a heated argument about the AI business in the living room.*" :
+        gameState.killer === 'Michal' ?
+          "*You noticed Michal was unusually quiet during dinner and kept looking at the ${gameState.weapon}.*" :
+        gameState.killer === 'Ilan' ?
+          "*You overheard Ilan and Omri arguing about the family business in hushed voices.*" :
+        "*You saw Neta taking an unusual interest in Omri's private documents.*",
+
+      Rom: isKiller ?
+        `You prepared the ${gameState.weapon} while pretending to work on your AI project.` :
+        gameState.killer === 'Rachel' ?
+          "*Mother seemed very agitated when discussing the family inheritance with Omri.*" :
+        gameState.killer === 'Michal' ?
+          "*I noticed Michal sneaking around near the ${gameState.location} before dinner.*" :
+        gameState.killer === 'Ilan' ?
+          "*Father was acting strangely, checking the ${gameState.location} multiple times.*" :
+        "*Neta was asking odd questions about Omri's schedule.*",
+
+      Ilan: isKiller ?
+        `You ensured everyone saw you working in the barn, establishing your alibi.` :
+        gameState.killer === 'Rachel' ?
+          "*Rachel was oddly insistent about changing the dinner arrangements.*" :
+        gameState.killer === 'Rom' ?
+          "*Rom was suspiciously absent from his usual work routine.*" :
+        gameState.killer === 'Michal' ?
+          "*Michal made an unusual request to borrow the ${gameState.weapon}.*" :
+        "*Neta was seen near Omri's study when she shouldn't have been there.*",
+
+      Michal: isKiller ?
+        `You casually mentioned being tired to explain going to bed early.` :
+        gameState.killer === 'Rachel' ?
+          "*Rachel was frantically searching for something in the ${gameState.location}.*" :
+        gameState.killer === 'Rom' ?
+          "*Rom was oddly interested in the ${gameState.weapon}'s location.*" :
+        gameState.killer === 'Ilan' ?
+          "*Ilan made an excuse to check the ${gameState.location} multiple times.*" :
+        "*Neta was asking strange questions about Omri's evening routine.*",
+
+      Neta: isKiller ?
+        `You used your pregnancy as an excuse to move around the house freely.` :
+        gameState.killer === 'Rachel' ?
+          "*Rachel was behaving strangely around the ${gameState.weapon}.*" :
+        gameState.killer === 'Rom' ?
+          "*Rom kept checking if Omri was alone in the ${gameState.location}.*" :
+        gameState.killer === 'Ilan' ?
+          "*Ilan was seen pacing near the ${gameState.location} repeatedly.*" :
+        "*Michal was unusually interested in when Omri would be alone.*"
+    },
+
   murderNight: {
-    Rachel: "Your dogs started barking around midnight.",
-    Rom: "You were seen in the hallway near Omri's room, looking flustered.",
-    Ilan: "You heard a thud near the study and thought it was someone moving furniture.",
-    Michal: "You found Omri's body and were the first to raise the alarm.",
-    Neta: "You heard footsteps near Omri's room but were too scared to check."
-  },
+      Rachel: isKiller ?
+        `You waited until your dogs were asleep to avoid their barking.` :
+        `*Your dogs started barking frantically around ${gameState.timeOfDeath}.*`,
+
+      Rom: isKiller ?
+        `You made sure to create noise in another part of the house as cover.` :
+        `*I heard strange noises from the ${gameState.location} around ${gameState.timeOfDeath}.*`,
+
+      Ilan: isKiller ?
+        `You used your knowledge of the house's creaky floors to move silently.` :
+        `*I noticed unusual movements near the ${gameState.location} at ${gameState.timeOfDeath}.*`,
+
+      Michal: isKiller ?
+        `You pretended to be asleep when you heard others moving around.` :
+        `*I woke up to strange sounds around ${gameState.timeOfDeath}.*`,
+
+      Neta: isKiller ?
+        `You used your pregnancy discomfort as an excuse to be awake.` :
+        `*The baby was restless, and I heard someone in the ${gameState.location}.*`
+    },
+
   dayAfter: {
-    Rachel: "You're trying to comfort everyone while subtly spreading suspicion about Rom.",
-    Rom: "You noticed Michal acting jumpy all morning.",
-    Ilan: "You're carefully observing everyone's reactions.",
-    Michal: "You were seen doing laundry unusually early in the morning.",
-    Neta: "You saw Michal near the laundry room early morning, which was unusual."
-  }
-};
+      Rachel: isKiller ?
+        `You acted shocked and immediately suggested checking on Rom's alibi.` :
+        `*${gameState.killer} was the first person I saw near the ${gameState.location} this morning.*`,
+
+      Rom: isKiller ?
+        `You made sure to point out how tired Michal looked.` :
+        `*${gameState.killer} was acting strangely around the ${gameState.weapon} this morning.*`,
+
+      Ilan: isKiller ?
+        `You suggested everyone stay calm and let the detective handle things.` :
+        `*I saw ${gameState.killer} returning from the ${gameState.location} very early.*`,
+
+      Michal: isKiller ?
+        `You discovered the body and raised the alarm, controlling the narrative.` :
+        `*${gameState.killer} was suspiciously calm when we found Omri.*`,
+
+      Neta: isKiller ?
+        `You stayed in your room claiming morning sickness.` :
+        `*${gameState.killer} was the only person awake before we found Omri.*`
+    }
+  };
+}
 
 function getTimelineKnowledge(character: string, gameContext: GameContext): string {
+  const timeline = generateTimeline(character);
   const knowledge = [];
   
   if (gameContext.timelineProgress.dayBefore) {
-    knowledge.push(timeline.dayBefore[character as keyof typeof timeline.dayBefore]);
+    knowledge.push(timeline.dayBefore[character]);
   }
   if (gameContext.timelineProgress.murderNight) {
-    knowledge.push(timeline.murderNight[character as keyof typeof timeline.murderNight]);
+    knowledge.push(timeline.murderNight[character]);
   }
   if (gameContext.timelineProgress.dayAfter) {
-    knowledge.push(timeline.dayAfter[character as keyof typeof timeline.dayAfter]);
+    knowledge.push(timeline.dayAfter[character]);
   }
 
   return knowledge.join('\n');
@@ -298,7 +395,7 @@ export async function getCharacterResponse(
     const response = await openai.chat.completions.create({
       model: 'gpt-4o-mini',
       messages: messages,
-      temperature: 0.7,
+      temperature: 0.6,
       max_tokens: 150,
       presence_penalty: 0.6,
       frequency_penalty: 0.3
@@ -582,89 +679,245 @@ let groupDiscussion: GroupDiscussionState = {
   characterEmotions: {}
 };
 
-// Enhanced character response system
+// Add character personalities after relationships
+export const characterPersonalities = {
+  Rachel: { 
+    traits: "warm and protective mother, speaks with motherly concern, often references her dogs",
+    style: "uses caring phrases, shows maternal instincts"
+  },
+  Rom: { 
+    traits: "competitive and tech-savvy brother, passionate about AI business",
+    style: "speaks confidently, uses business analogies"
+  },
+  Ilan: { 
+    traits: "reserved and observant father, practical farmer",
+    style: "speaks carefully, uses simple direct language"
+  },
+  Michal: { 
+    traits: "sociable and nurturing wife, good sense of humor",
+    style: "speaks warmly, occasionally uses light humor"
+  },
+  Neta: { 
+    traits: "gentle and observant sister-in-law, expecting mother",
+    style: "speaks thoughtfully, notices small details"
+  }
+};
+
+interface CharacterAlibi {
+  location: string;
+  activity: string;
+  withPerson: string | null;
+  startTime: string;
+  endTime: string;
+  details: string[];
+  isTrue: boolean;
+}
+
+const fixedAlibis: Record<string, CharacterAlibi> = {
+  Rachel: {
+    location: "kitchen",
+    activity: "preparing tomorrow's breakfast pastries",
+    withPerson: null,
+    startTime: "10:30 PM",
+    endTime: "1:00 AM",
+    details: [
+      "was trying out a new cinnamon roll recipe",
+      "the dough needed to rise overnight",
+      "can show the prepared dough in the fridge",
+      "wrote notes about the recipe adjustments"
+    ],
+    isTrue: true
+  },
+  Rom: {
+    location: "study",
+    activity: "working on AI project documents",
+    withPerson: null,
+    startTime: "9:00 PM",
+    endTime: "2:00 AM",
+    details: [
+      "was reviewing the Johnson merger financial projections",
+      "found several errors in the quarterly reports",
+      "sent emails to the team about the changes",
+      "can show the timestamped document edits"
+    ],
+    isTrue: true
+  },
+  Ilan: {
+    location: "barn",
+    activity: "checking on new equipment",
+    withPerson: null,
+    startTime: "11:00 PM",
+    endTime: "12:30 AM",
+    details: [
+      "was testing the new irrigation system",
+      "made notes about required maintenance",
+      "heard strange noises from the house",
+      "can show the maintenance log entries"
+    ],
+    isTrue: true
+  },
+  Michal: {
+    location: "living room",
+    activity: "reading a book",
+    withPerson: null,
+    startTime: "10:00 PM",
+    endTime: "1:30 AM",
+    details: [
+      "was reading 'Murder on the Orient Express'",
+      "made tea around midnight",
+      "heard footsteps in the hallway",
+      "can show the bookmark and tea mug"
+    ],
+    isTrue: true
+  },
+  Neta: {
+    location: "bedroom",
+    activity: "resting due to pregnancy discomfort",
+    withPerson: null,
+    startTime: "9:30 PM",
+    endTime: "2:00 AM",
+    details: [
+      "was having trouble sleeping due to back pain",
+      "took notes in pregnancy journal",
+      "heard movement in the hallway",
+      "can show pregnancy journal entries"
+    ],
+    isTrue: true
+  }
+};
+
+function generateKillerFalseAlibi(killer: string): CharacterAlibi {
+  // Create a false alibi for the killer that's different from their true alibi
+  const falseAlibi: CharacterAlibi = {
+    location: gameState?.location === "living room" ? "study" : "living room",
+    activity: "reading documents",
+    withPerson: null,
+    startTime: "10:00 PM",
+    endTime: "1:00 AM",
+    details: [
+      "was alone most of the night",
+      "might have dozed off briefly",
+      "don't remember exact times",
+      "was distracted by work thoughts"
+    ],
+    isTrue: false
+  };
+  return falseAlibi;
+}
+
+function getCharacterAlibi(character: string): string {
+  if (!gameState) return '';
+
+  // If this is the killer, return their false alibi
+  if (character === gameState.killer) {
+    const falseAlibi = generateKillerFalseAlibi(character);
+    return `${falseAlibi.activity} in the ${falseAlibi.location} from ${falseAlibi.startTime} to ${falseAlibi.endTime}`;
+  }
+
+  // Otherwise, return their true alibi
+  const alibi = fixedAlibis[character];
+  if (!alibi) return '';
+
+  return `${alibi.activity} in the ${alibi.location} from ${alibi.startTime} to ${alibi.endTime}`;
+}
+
+function getAlibiDetails(character: string): string[] {
+  if (!gameState) return [];
+
+  // If this is the killer, return vague details
+  if (character === gameState.killer) {
+    const falseAlibi = generateKillerFalseAlibi(character);
+    return falseAlibi.details;
+  }
+
+  // Otherwise, return specific, verifiable details
+  const alibi = fixedAlibis[character];
+  return alibi?.details || [];
+}
+
+function isAlibiConsistentWith(character1: string, character2: string): boolean {
+  if (!gameState) return false;
+
+  const alibi1 = character1 === gameState.killer ? generateKillerFalseAlibi(character1) : fixedAlibis[character1];
+  const alibi2 = character2 === gameState.killer ? generateKillerFalseAlibi(character2) : fixedAlibis[character2];
+
+  if (!alibi1 || !alibi2) return false;
+
+  // Check if the alibis overlap in time and location
+  return alibi1.location === alibi2.location && 
+         alibi1.withPerson === character2 && 
+         alibi2.withPerson === character1;
+}
+
+function getCharacterPrompt(character: string, gameContext: GameContext): string {
+  const isKiller = character === gameState?.killer;
+  const basePrompt = `You are ${character}, a member of the family. ${characterPersonalities[character].traits}. ${characterPersonalities[character].style}.`;
+  const alibi = isKiller ? generateKillerFalseAlibi(character) : fixedAlibis[character];
+  const alibiDetails = getAlibiDetails(character);
+
+  if (isKiller) {
+    return `${basePrompt}
+
+You are the killer. You killed Omri ${gameState?.timeOfDeath} in the ${gameState?.location} using ${gameState?.weapon}. Your motive was ${gameState?.motive}.
+
+Your false alibi is that you were ${alibi.activity} in the ${alibi.location} from ${alibi.startTime} to ${alibi.endTime}. If pressed for details, use these vague responses:
+${alibiDetails.map(detail => `- ${detail}`).join('\n')}
+
+Follow these rules:
+1. Never reveal you are the killer
+2. Stick to your false alibi no matter what - NEVER change your story
+3. If someone claims they were with you, say they must be mistaken
+4. Be vague about specific details if pressed
+5. Show subtle signs of stress when discussing the murder
+6. If challenged about your alibi, stay firm but deflect from details`;
+  } else {
+    return `${basePrompt}
+
+You are innocent. You were ${alibi.activity} in the ${alibi.location} from ${alibi.startTime} to ${alibi.endTime}. You have these specific details to prove it:
+${alibiDetails.map(detail => `- ${detail}`).join('\n')}
+
+Follow these rules:
+1. Always stick to your true alibi - NEVER change your story
+2. If someone claims they were with you when they weren't, firmly correct them
+3. Provide specific details to support your alibi when relevant
+4. Point out any contradictions in others' stories
+5. Share your observations about suspicious behavior
+6. Mark important clues with asterisks (*like this*)`;
+  }
+}
+
 export async function getGroupResponse(
   character: string,
   userMessage: string,
-  conversationHistory: { role: string; content: string; character?: string }[],
+  conversationHistory: ChatMessage[],
   gameContext: GameContext
 ): Promise<string> {
-  if (!gameState) throw new Error('Game state not initialized');
+  const messages: ChatMessage[] = [
+    {
+      role: "system",
+      content: `${getCharacterPrompt(character, gameContext)}
 
-  const isKiller = character === gameState.killer;
-  const characterProfile = characters[character];
-  
-  // Update group discussion state
-  updateGroupState(character, userMessage);
-  
-  // Get relevant reactions from other characters
-  const recentDiscussion = getRecentDiscussion(conversationHistory);
-  const otherCharactersReactions = getRelevantReactions(character, recentDiscussion);
-  
-  // Build enhanced character knowledge
-  const characterKnowledge = `
-    ${isKiller ? getKillerKnowledge(character) : getInnocentKnowledge(character)}
-    
-    Recent Group Discussion:
-    ${recentDiscussion}
-    
-    Other Characters' Reactions:
-    ${otherCharactersReactions}
-    
-    Current Discussion Topic: ${groupDiscussion.discussionTopic}
-    Room Tension Level: ${groupDiscussion.tensionLevel}
-    
-    Group Discussion Rules:
-    1. React naturally to what others have said
-    2. Build on or challenge others' statements
-    3. Show appropriate emotional reactions
-    4. Maintain consistent story across interactions
-    5. Reference previous statements when relevant
-    6. Form alliances or conflicts based on revealed information
-    7. Express suspicion or support for others' claims
-  `;
+Current game context:
+- Phase: ${gameContext.currentPhase}
+- Timeline discussed: ${Object.entries(gameContext.timelineProgress)
+  .filter(([_, discussed]) => discussed)
+  .map(([phase]) => phase)
+  .join(', ')}
+- Revealed clues: ${gameContext.revealedClues.join(', ')}
 
-  const systemMessage = `
-    You are ${character}, participating in a group investigation about Omri's murder.
-    ${characterProfile}
-    ${characterKnowledge}
+Remember:
+1. Stay in character at all times
+2. Respond naturally to the conversation
+3. If someone claims they were with you and they weren't, immediately point this out
+4. Reference your actual location and activities during the murder
+5. Share specific details that support your true alibi
+6. React appropriately to others' claims and statements`
+    },
+    ...conversationHistory,
+    { role: "user", content: userMessage }
+  ];
 
-    Response Guidelines:
-    1. Stay in character and maintain your personality
-    2. React to recent statements by other suspects
-    3. Show appropriate emotional state
-    4. Reference specific details from the discussion
-    5. Build on or challenge others' claims naturally
-    6. Keep responses concise (2-3 sentences)
-    7. Mark important revelations with asterisks (*like this*)
-    8. Avoid AI-style language or prefixes
-  `;
-
-  try {
-    const response = await openai.chat.completions.create({
-      model: 'gpt-4o-mini',
-      messages: [
-        { role: 'system', content: systemMessage },
-        ...conversationHistory.map(msg => ({
-          role: msg.role as MessageRole,
-          content: msg.content,
-          character: msg.character
-        })),
-        { role: 'user', content: userMessage }
-      ],
-      temperature: 0.7,
-      max_tokens: 150,
-      presence_penalty: 0.6,
-      frequency_penalty: 0.3
-    });
-
-    const generatedResponse = response.choices[0]?.message?.content || 'I need a moment to think about that.';
-    updateEmotionsAndTension(character, generatedResponse);
-    return generatedResponse;
-  } catch (error) {
-    console.error('Error in group response:', error);
-    return 'I need a moment to collect my thoughts.';
-  }
+  return callOpenAI(messages);
 }
 
 function updateGroupState(character: string, message: string): void {
@@ -749,4 +1002,22 @@ function getInnocentKnowledge(character: string): string {
     - Share relevant information when appropriate
     - React genuinely to new revelations
   `;
+}
+
+async function callOpenAI(messages: ChatMessage[]): Promise<string> {
+  try {
+    const response = await openai.chat.completions.create({
+      model: "gpt-3.5-turbo",
+      messages,
+      temperature: 0.7,
+      max_tokens: 150,
+      presence_penalty: 0.6,
+      frequency_penalty: 0.8
+    });
+
+    return response.choices[0]?.message?.content || "No response generated.";
+  } catch (error) {
+    console.error('Error getting response:', error);
+    return "I'm sorry, I'm not able to respond right now.";
+  }
 }

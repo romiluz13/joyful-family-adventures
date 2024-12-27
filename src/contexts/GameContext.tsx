@@ -8,7 +8,7 @@ interface Clue {
   isKey: boolean;
 }
 
-type GamePhase = 'intro' | 'investigation' | 'accusation' | 'resolution';
+type GamePhase = 'intro' | 'investigator-select' | 'investigation' | 'resolution';
 
 interface GameContextType {
   gamePhase: GamePhase;
